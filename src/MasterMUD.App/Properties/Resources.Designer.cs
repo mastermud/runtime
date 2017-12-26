@@ -70,6 +70,15 @@ namespace MasterMUD.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Only one running instance is allowed..
+        /// </summary>
+        public static string StaticConstructorDuplicated {
+            get {
+                return ResourceManager.GetString("StaticConstructorDuplicated", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to MasterMUD.
         /// </summary>
         public static string Title {
