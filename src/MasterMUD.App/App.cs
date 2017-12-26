@@ -1,4 +1,6 @@
-﻿namespace MasterMUD
+﻿using MasterMUD.Interfaces;
+
+namespace MasterMUD
 {
     public sealed partial class App
     {
@@ -62,7 +64,35 @@
 
                             foreach (var attr in assm.CustomAttributes)
                             {
-                                System.Console.WriteLine($"\t{attr}");
+                                System.Console.WriteLine($"{attr}");
+                                foreach(var line in attr.NamedArguments)
+                                    System.Console.WriteLine($"\t{line.MemberName}");
+                            }
+
+                            foreach(var type in assm.GetTypes())
+                            {
+                                System.Console.WriteLine($"Type {type.Name} found.");
+
+                                if (false == type.IsInterface)
+                                {
+                                    var i = type.GetInterface(nameof(IFeature));
+
+                                    if (i != null)
+                                    {
+                                        System.Console.WriteLine($"Feature {type.Name} found.");
+
+                                        if (Features.ContainsKey(type.Name))
+                                        {
+                                            Features[type.Name] = type as MasterMUD.Interfaces.IFeature;
+                                        }
+                                        else
+                                        {
+                                            Features.TryAdd(type.Name, type as MasterMUD.Interfaces.IFeature);
+                                        }
+
+                                        break;
+                                    }
+                                }
                             }
                         }
                         catch (System.Exception)
@@ -157,6 +187,23 @@
         {
             e.Cancel = true;
             Terminate();
+        }
+    }
+
+    public class Feature : MasterMUD.Interfaces.IFeature
+    {
+        public bool Active => throw new System.NotImplementedException();
+
+        public string Name => throw new System.NotImplementedException();
+
+        public void Start()
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public void Stop()
+        {
+            throw new System.NotImplementedException();
         }
     }
 }
