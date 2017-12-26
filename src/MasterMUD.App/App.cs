@@ -42,6 +42,13 @@ namespace MasterMUD
                     }
 
                     App.EventWaitHandle = new System.Threading.EventWaitHandle(initialState: false, mode: System.Threading.EventResetMode.ManualReset);
+
+                    var args = System.Environment.GetCommandLineArgs();
+                    var fi = new System.IO.FileInfo(args[0]);
+                    var dir = new System.IO.DirectoryInfo(fi.DirectoryName);
+                    Console.WriteLine($"Initializing from {dir.FullName}");
+                    foreach (var dll in dir.GetFiles("*.dll", System.IO.SearchOption.AllDirectories))
+                        Console.WriteLine($"\t {dll.Name}");
                 }
 
                 System.Console.WriteLine("Ready.");
@@ -86,7 +93,7 @@ namespace MasterMUD
             using (App.Mutex)
             using (App.EventWaitHandle)
                 try
-                {
+                {                    
                     System.Console.CancelKeyPress += Console_CancelKeyPress;
 
                     try
