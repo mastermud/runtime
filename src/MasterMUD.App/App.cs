@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace MasterMUD
+﻿namespace MasterMUD
 {
     public sealed partial class App
     {
@@ -46,27 +44,35 @@ namespace MasterMUD
                         System.Console.Clear();
                         System.Console.CursorVisible = false;
                         System.Console.TreatControlCAsInput = false;
-                        Console.WriteLine($"Initializing {dlls.Length} from {dir.FullName}");
+                        System.Console.WriteLine($"Initializing {dlls.Length} from {dir.FullName}{System.Environment.NewLine}");
                     }
 
                     App.EventWaitHandle = new System.Threading.EventWaitHandle(initialState: false, mode: System.Threading.EventResetMode.ManualReset);
-                    App.Features = new System.Collections.Concurrent.ConcurrentDictionary<string, MasterMUD.Interfaces.IFeature>(StringComparer.OrdinalIgnoreCase);
-                    
+                    App.Features = new System.Collections.Concurrent.ConcurrentDictionary<string, MasterMUD.Interfaces.IFeature>(System.StringComparer.OrdinalIgnoreCase);
+
                     foreach (var dll in dlls)
                     {
                         try
                         {
                             // TODO: Reflect implementations of IFeature
-                            Console.WriteLine($"\t {dll.Name}");
+                            var fiDll = new System.IO.FileInfo(dll.FullName);
+                            var assm = System.Reflection.Assembly.LoadFrom(fiDll.FullName);
+
+                            System.Console.WriteLine(System.Diagnostics.FileVersionInfo.GetVersionInfo(fiDll.FullName));
+
+                            foreach (var attr in assm.CustomAttributes)
+                            {
+                                System.Console.WriteLine($"\t{attr}");
+                            }
                         }
                         catch (System.Exception)
                         {
                             throw;
-                        }                        
+                        }
                     }
 
                     System.Console.WriteLine($"Loaded {App.Features.Count} features.");
-                }                
+                }
             }
             catch (System.Exception ex)
             {
@@ -108,7 +114,7 @@ namespace MasterMUD
             using (App.Mutex)
             using (App.EventWaitHandle)
                 try
-                {                    
+                {
                     System.Console.CancelKeyPress += Console_CancelKeyPress;
 
                     try
@@ -147,7 +153,7 @@ namespace MasterMUD
             }
         }
 
-        private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
+        private static void Console_CancelKeyPress(object sender, System.ConsoleCancelEventArgs e)
         {
             e.Cancel = true;
             Terminate();
