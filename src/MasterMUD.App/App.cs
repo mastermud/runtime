@@ -14,6 +14,8 @@ namespace MasterMUD
         /// </summary>
         private static readonly System.Threading.EventWaitHandle EventWaitHandle;
 
+        internal static System.Collections.Concurrent.ConcurrentDictionary<string, MasterMUD.Interfaces.IFeature> Features { get; }
+
         /// <summary>
         ///     Initializes the environment and performs all required work before Main is allowed to run.
         /// </summary>
@@ -32,6 +34,11 @@ namespace MasterMUD
                 }
                 else
                 {
+                    var args = System.Environment.GetCommandLineArgs();
+                    var fi = new System.IO.FileInfo(args[0]);
+                    var dir = new System.IO.DirectoryInfo(fi.DirectoryName);
+                    var dlls = dir.GetFiles("*.dll", System.IO.SearchOption.AllDirectories);
+
                     if (System.Environment.UserInteractive)
                     {
                         // TODO: Environment configuration and initialization.
@@ -39,19 +46,27 @@ namespace MasterMUD
                         System.Console.Clear();
                         System.Console.CursorVisible = false;
                         System.Console.TreatControlCAsInput = false;
+                        Console.WriteLine($"Initializing {dlls.Length} from {dir.FullName}");
                     }
 
                     App.EventWaitHandle = new System.Threading.EventWaitHandle(initialState: false, mode: System.Threading.EventResetMode.ManualReset);
+                    App.Features = new System.Collections.Concurrent.ConcurrentDictionary<string, MasterMUD.Interfaces.IFeature>(StringComparer.OrdinalIgnoreCase);
+                    
+                    foreach (var dll in dlls)
+                    {
+                        try
+                        {
+                            // TODO: Reflect implementations of IFeature
+                            Console.WriteLine($"\t {dll.Name}");
+                        }
+                        catch (System.Exception)
+                        {
+                            throw;
+                        }                        
+                    }
 
-                    var args = System.Environment.GetCommandLineArgs();
-                    var fi = new System.IO.FileInfo(args[0]);
-                    var dir = new System.IO.DirectoryInfo(fi.DirectoryName);
-                    Console.WriteLine($"Initializing from {dir.FullName}");
-                    foreach (var dll in dir.GetFiles("*.dll", System.IO.SearchOption.AllDirectories))
-                        Console.WriteLine($"\t {dll.Name}");
-                }
-
-                System.Console.WriteLine("Ready.");
+                    System.Console.WriteLine($"Loaded {App.Features.Count} features.");
+                }                
             }
             catch (System.Exception ex)
             {
