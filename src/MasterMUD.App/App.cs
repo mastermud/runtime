@@ -78,15 +78,20 @@ namespace MasterMUD
 
                                     if (i != null)
                                     {
+                                        var t = System.Activator.CreateInstance(i.GetType()) as IFeature;
+
+                                        if (t == null)
+                                            continue;
+
                                         System.Console.WriteLine($"Feature {type.Name} found.");
 
-                                        if (Features.ContainsKey(type.Name))
+                                        if (App.Features.ContainsKey(type.Name))
                                         {
-                                            Features[type.Name] = type as MasterMUD.Interfaces.IFeature;
+                                            App.Features[type.Name] = t;
                                         }
                                         else
                                         {
-                                            Features.TryAdd(type.Name, type as MasterMUD.Interfaces.IFeature);
+                                            App.Features.TryAdd(type.Name, t);
                                         }
 
                                         break;
@@ -141,25 +146,36 @@ namespace MasterMUD
         {
             using (App.Mutex)
             using (App.EventWaitHandle)
-                try
-                {
-                    System.Console.CancelKeyPress += Console_CancelKeyPress;
-
+                if (App.Features.Count > 0)
                     try
                     {
-                        App.EventWaitHandle.WaitOne();
+                        foreach (var feature in App.Features.Values)
+                        {
+                            feature.Start();
+                        }
+
+                        System.Console.CancelKeyPress += Console_CancelKeyPress;
+
+                        try
+                        {
+                            App.EventWaitHandle.WaitOne();
+                        }
+                        catch (System.Exception ex)
+                        {
+                            System.Console.Error.WriteLine(ex);
+                        }
+
+                        System.Console.CancelKeyPress -= Console_CancelKeyPress;
+
+                        foreach (var feature in App.Features.Values)
+                        {
+                            feature.Stop();
+                        }
                     }
                     catch (System.Exception ex)
                     {
                         System.Console.Error.WriteLine(ex);
                     }
-
-                    System.Console.CancelKeyPress -= Console_CancelKeyPress;
-                }
-                catch (System.Exception ex)
-                {
-                    System.Console.Error.WriteLine(ex);
-                }
         }
 
         private static void Terminate()
