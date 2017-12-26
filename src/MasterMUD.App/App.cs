@@ -5,9 +5,14 @@ namespace MasterMUD
     public sealed partial class App
     {
         /// <summary>
-        ///     Ensure only one running instance is allowed.
+        ///     Ensures only one running instance is allowed.
         /// </summary>
         private static readonly System.Threading.Mutex Mutex;
+
+        /// <summary>
+        ///     Keeps the application alive forever.
+        /// </summary>
+        private static readonly System.Threading.EventWaitHandle EventWaitHandle;
 
         /// <summary>
         ///     Initializes the environment and performs all required work before Main is allowed to run.
@@ -33,8 +38,10 @@ namespace MasterMUD
                         System.Console.Title = Properties.Resources.Title;
                         System.Console.Clear();
                         System.Console.CursorVisible = false;
-                        System.Console.TreatControlCAsInput = true;                        
+                        System.Console.TreatControlCAsInput = false;
                     }
+
+                    App.EventWaitHandle = new System.Threading.EventWaitHandle(initialState: false, mode: System.Threading.EventResetMode.ManualReset);
                 }
 
                 System.Console.WriteLine("Ready.");
@@ -77,15 +84,51 @@ namespace MasterMUD
         private static void Main()
         {
             using (App.Mutex)
+            using (App.EventWaitHandle)
                 try
-                {                    
-                    Console.ReadKey(intercept: true);
-                    System.Console.Clear();
+                {
+                    System.Console.CancelKeyPress += Console_CancelKeyPress;
+
+                    try
+                    {
+                        App.EventWaitHandle.WaitOne();
+                    }
+                    catch (System.Exception ex)
+                    {
+                        System.Console.Error.WriteLine(ex);
+                    }
+
+                    System.Console.CancelKeyPress -= Console_CancelKeyPress;
                 }
                 catch (System.Exception ex)
                 {
                     System.Console.Error.WriteLine(ex);
-                }            
+                }
+        }
+
+        private static void Terminate()
+        {
+            try
+            {
+                App.EventWaitHandle.Set();
+            }
+            finally
+            {
+                try
+                {
+                    App.EventWaitHandle.Reset();
+                }
+                finally
+                {
+                    System.Console.WriteLine("Terminated.");
+                }
+            }
+        }
+
+        private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
+        {
+            e.Cancel = true;
+            Terminate();
         }
     }
 }
