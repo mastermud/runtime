@@ -53,7 +53,6 @@ namespace MasterMUD
                     App.Features = new System.Collections.Concurrent.ConcurrentDictionary<string, MasterMUD.Interfaces.IFeature>(System.StringComparer.OrdinalIgnoreCase);
 
                     foreach (var dll in dlls)
-                    {
                         try
                         {
                             // TODO: Reflect implementations of IFeature
@@ -65,11 +64,11 @@ namespace MasterMUD
                             foreach (var attr in assm.CustomAttributes)
                             {
                                 System.Console.WriteLine($"{attr}");
-                                foreach(var line in attr.NamedArguments)
+                                foreach (var line in attr.NamedArguments)
                                     System.Console.WriteLine($"\t{line.MemberName}");
                             }
 
-                            foreach(var type in assm.GetTypes())
+                            foreach (var type in assm.GetTypes())
                             {
                                 System.Console.WriteLine($"Type {type.Name} found.");
 
@@ -99,7 +98,6 @@ namespace MasterMUD
                         {
                             throw;
                         }
-                    }
 
                     System.Console.WriteLine($"Loaded {App.Features.Count} features.");
                 }
@@ -187,23 +185,6 @@ namespace MasterMUD
         {
             e.Cancel = true;
             Terminate();
-        }
-    }
-
-    public class Feature : MasterMUD.Interfaces.IFeature
-    {
-        public bool Active => throw new System.NotImplementedException();
-
-        public string Name => throw new System.NotImplementedException();
-
-        public void Start()
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public void Stop()
-        {
-            throw new System.NotImplementedException();
         }
     }
 }
