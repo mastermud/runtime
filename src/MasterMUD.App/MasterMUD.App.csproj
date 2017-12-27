@@ -14,8 +14,8 @@
     <Copyright>Copyright © Seth Rudesill 2017</Copyright>
     <NeutralLanguage>en</NeutralLanguage>
     <Version>1.0.1</Version>
-    <AssemblyVersion>1.0.1.1</AssemblyVersion>
-    <FileVersion>1.0.1.1</FileVersion>
+    <AssemblyVersion>1.0.1.2</AssemblyVersion>
+    <FileVersion>1.0.1.2</FileVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -42,6 +42,11 @@
     <Content Include="Plugins\README.md">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Linq.Queryable" Version="4.3.0" />
+    <PackageReference Include="System.Reactive" Version="4.0.0-preview00001" />
   </ItemGroup>
 
   <ItemGroup>

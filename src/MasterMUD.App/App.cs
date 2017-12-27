@@ -1,4 +1,7 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
+using System.Reactive;
+using System.Reactive.Linq;
 using MasterMUD.Interfaces;
 
 namespace MasterMUD
@@ -41,7 +44,8 @@ namespace MasterMUD
 
                         try
                         {
-                            App.Current.EventWaitHandle.WaitOne();
+                            
+                                App.Current.EventWaitHandle.WaitOne();
                         }
                         catch (System.Exception ex)
                         {

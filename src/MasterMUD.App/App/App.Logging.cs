@@ -13,7 +13,7 @@ namespace MasterMUD
                     {
                         var oldFgColor = System.Console.ForegroundColor;
                         System.Console.ForegroundColor = System.ConsoleColor.Cyan;
-                        System.Console.Write("{0} ", (System.DateTime.Now - App.Current.Activated).TotalSeconds);
+                        System.Console.Write("{0} ", (System.DateTime.Now - App.Current.Activated));
                         System.Console.ForegroundColor = foregroundColor;
                         System.Console.WriteLine(data);
                         System.Console.ForegroundColor = oldFgColor;

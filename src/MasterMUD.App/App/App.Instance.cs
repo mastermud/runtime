@@ -1,11 +1,14 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using MasterMUD.Interfaces;
 
 namespace MasterMUD
 {
     public sealed partial class App
     {
-        public System.DateTime Activated { get; }
+        public System.DateTime Activated { get; } = System.DateTime.Now;
+
+        private readonly System.IDisposable ActivationSubscription;
 
         /// <summary>
         ///     Ensures only one running instance is allowed.
@@ -21,13 +24,25 @@ namespace MasterMUD
 
         private App()
         {
-            this.Activated = System.DateTime.Now;
             this.EventWaitHandle = new System.Threading.EventWaitHandle(initialState: false, mode: System.Threading.EventResetMode.ManualReset);
             this.Features = new System.Collections.Concurrent.ConcurrentDictionary<string, MasterMUD.Interfaces.IFeature>(System.StringComparer.OrdinalIgnoreCase);
             this.Mutex = new System.Threading.Mutex(initiallyOwned: true, name: nameof(MasterMUD), createdNew: out var createdNew);
 
             if (!createdNew)
                 throw new System.InvalidProgramException(Properties.Resources.StaticConstructorDuplicated);
+
+            var args = System.Environment.GetCommandLineArgs();
+            var fi = new System.IO.FileInfo(args[0]);
+            var dir = new System.IO.DirectoryInfo(fi.DirectoryName);
+            var pluginsPath = System.IO.Path.Combine(dir.FullName, "Plugins");
+            var pluginsDir = System.IO.Directory.Exists(pluginsPath) ? new System.IO.DirectoryInfo(pluginsPath) : System.IO.Directory.CreateDirectory(pluginsPath);
+            var dlls = pluginsDir.GetFiles("*.dll", System.IO.SearchOption.AllDirectories);
+
+            foreach (var dll in dlls)
+                foreach (var feature in System.Reflection.Assembly.LoadFrom(dll.FullName).GetTypes().Where(type => false == type.IsInterface && type.GetInterface(nameof(IFeature)) != null).Select(type => (IFeature)System.Activator.CreateInstance(type)).Where(feature => true == this.Features.TryAdd(feature.Name, feature)))
+                    App.Log($"Feature '{feature.Name}' added.");
+
+            this.ActivationSubscription = System.Reactive.Linq.Observable.Interval(System.TimeSpan.FromSeconds(6)).Subscribe(t => App.Log($"Tick-{t + 1}"));
 
             if (System.Environment.UserInteractive)
             {
@@ -37,19 +52,6 @@ namespace MasterMUD
                 System.Console.CursorVisible = false;
                 System.Console.TreatControlCAsInput = false;
             }
-
-            var args = System.Environment.GetCommandLineArgs();
-            var fi = new System.IO.FileInfo(args[0]);
-            var dir = new System.IO.DirectoryInfo(fi.DirectoryName);
-            var pluginsPath = System.IO.Path.Combine(dir.FullName, "Plugins");
-            var pluginsDir = System.IO.Directory.Exists(pluginsPath) ? new System.IO.DirectoryInfo(pluginsPath) : System.IO.Directory.CreateDirectory(pluginsPath);
-            var dlls = pluginsDir.GetFiles("*.dll", System.IO.SearchOption.AllDirectories);
-
-            App.Log($"Found {dlls.Length} DLLs in {dir.FullName}");
-            foreach (var dll in dlls)
-                foreach (var feature in System.Reflection.Assembly.LoadFrom(dll.FullName).GetTypes().Where(type => false == type.IsInterface && type.GetInterface(nameof(IFeature)) != null).Select(type => (IFeature)System.Activator.CreateInstance(type)))
-                    if (this.Features.TryAdd(feature.Name, feature))
-                        App.Log($"Feature '{feature.Name}' added.");
         }
 
         private void Terminate()
@@ -66,7 +68,7 @@ namespace MasterMUD
                 }
                 finally
                 {
-                    App.Log("Terminating.");
+                    this.ActivationSubscription.Dispose();
                 }
             }
         }

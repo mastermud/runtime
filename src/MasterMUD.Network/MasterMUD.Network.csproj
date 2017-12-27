@@ -9,8 +9,8 @@
     <NeutralLanguage>en</NeutralLanguage>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <SignAssembly>false</SignAssembly>
-    <AssemblyVersion>1.0.0.1</AssemblyVersion>
-    <FileVersion>1.0.0.1</FileVersion>
+    <AssemblyVersion>1.0.1.1</AssemblyVersion>
+    <FileVersion>1.0.1.1</FileVersion>
     <Version>1.0.1</Version>
   </PropertyGroup>
 
@@ -29,9 +29,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Reference Include="MasterMUD">
-      <HintPath>..\..\rel\MasterMUD.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="..\MasterMUD.App\MasterMUD.App.csproj" />
   </ItemGroup>
 
 </Project>
