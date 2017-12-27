@@ -1,4 +1,5 @@
-﻿using MasterMUD.Interfaces;
+﻿using System.Linq;
+using MasterMUD.Interfaces;
 
 namespace MasterMUD
 {
@@ -46,65 +47,16 @@ namespace MasterMUD
                         System.Console.Clear();
                         System.Console.CursorVisible = false;
                         System.Console.TreatControlCAsInput = false;
-                        System.Console.WriteLine($"Initializing {dlls.Length} from {dir.FullName}{System.Environment.NewLine}");
+                        System.Console.WriteLine($"Found {dlls.Length} DLLs in {dir.FullName}");
                     }
 
                     App.EventWaitHandle = new System.Threading.EventWaitHandle(initialState: false, mode: System.Threading.EventResetMode.ManualReset);
                     App.Features = new System.Collections.Concurrent.ConcurrentDictionary<string, MasterMUD.Interfaces.IFeature>(System.StringComparer.OrdinalIgnoreCase);
 
                     foreach (var dll in dlls)
-                        try
-                        {
-                            // TODO: Reflect implementations of IFeature
-                            var fiDll = new System.IO.FileInfo(dll.FullName);
-                            var assm = System.Reflection.Assembly.LoadFrom(fiDll.FullName);
-
-                            System.Console.WriteLine(System.Diagnostics.FileVersionInfo.GetVersionInfo(fiDll.FullName));
-
-                            foreach (var attr in assm.CustomAttributes)
-                            {
-                                System.Console.WriteLine($"{attr}");
-                                foreach (var line in attr.NamedArguments)
-                                    System.Console.WriteLine($"\t{line.MemberName}");
-                            }
-
-                            foreach (var type in assm.GetTypes())
-                            {
-                                System.Console.WriteLine($"Type {type.Name} found.");
-
-                                if (false == type.IsInterface)
-                                {
-                                    var i = type.GetInterface(nameof(IFeature));
-
-                                    if (i != null)
-                                    {
-                                        var t = System.Activator.CreateInstance(i.GetType()) as IFeature;
-
-                                        if (t == null)
-                                            continue;
-
-                                        System.Console.WriteLine($"Feature {type.Name} found.");
-
-                                        if (App.Features.ContainsKey(type.Name))
-                                        {
-                                            App.Features[type.Name] = t;
-                                        }
-                                        else
-                                        {
-                                            App.Features.TryAdd(type.Name, t);
-                                        }
-
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                        catch (System.Exception)
-                        {
-                            throw;
-                        }
-
-                    System.Console.WriteLine($"Loaded {App.Features.Count} features.");
+                        foreach (var feature in System.Reflection.Assembly.LoadFrom(dll.FullName).GetTypes().Where(type => false == type.IsInterface && type.GetInterface(nameof(IFeature)) != null).Select(type => (IFeature)System.Activator.CreateInstance(type)))
+                            if (App.Features.TryAdd(feature.Name, feature))
+                                System.Console.WriteLine($"Feature '{feature.Name}' added.");
                 }
             }
             catch (System.Exception ex)
@@ -158,6 +110,7 @@ namespace MasterMUD
 
                         try
                         {
+                            System.Console.WriteLine("Ready. Press CTRL+C to terminate.");
                             App.EventWaitHandle.WaitOne();
                         }
                         catch (System.Exception ex)
@@ -192,7 +145,7 @@ namespace MasterMUD
                 }
                 finally
                 {
-                    System.Console.WriteLine("Terminated.");
+                    System.Console.WriteLine("Terminating.");
                 }
             }
         }
