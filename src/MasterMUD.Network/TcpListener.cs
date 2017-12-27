@@ -21,7 +21,7 @@ namespace MasterMUD.Network
                 return;
 
             this.Active = true;
-            System.Console.WriteLine("Listener activated.");
+            App.Log($"{Name} activated.");
         }
 
         public void Stop()
@@ -30,7 +30,7 @@ namespace MasterMUD.Network
                 return;
 
             this.Active = false;
-            System.Console.WriteLine("Listener de-activated.");
+            App.Log($"{Name} de-activated.");
         }
     }
 }

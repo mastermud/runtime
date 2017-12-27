@@ -29,7 +29,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MasterMUD.App\MasterMUD.App.csproj" />
+    <Reference Include="MasterMUD">
+      <HintPath>..\..\rel\MasterMUD.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

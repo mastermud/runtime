@@ -13,7 +13,9 @@
     <Authors>Seth Rudesill</Authors>
     <Copyright>Copyright © Seth Rudesill 2017</Copyright>
     <NeutralLanguage>en</NeutralLanguage>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
+    <AssemblyVersion>1.0.1.1</AssemblyVersion>
+    <FileVersion>1.0.1.1</FileVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -31,6 +33,16 @@
     <LangVersion>7.2</LangVersion>
     <NoWarn>1701;1702;1705;CS0628</NoWarn>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Plugins\README.md" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Plugins\README.md">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 
   <ItemGroup>
     <Compile Update="Properties\Resources.Designer.cs">

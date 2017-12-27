@@ -61,6 +61,15 @@ namespace MasterMUD.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Ready. Press CTRL+C to terminate..
+        /// </summary>
+        public static string Ready {
+            get {
+                return ResourceManager.GetString("Ready", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to This shouldn&apos;t happen..
         /// </summary>
         public static string StaticConstructorCatastrophic {
