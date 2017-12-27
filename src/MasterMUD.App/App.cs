@@ -8,8 +8,9 @@ namespace MasterMUD
 {
     public sealed partial class App
     {
-        private static readonly object Lock = new object();
-
+        /// <summary>
+        ///     Singleton instance of the application at runtime.
+        /// </summary>
         public static readonly App Current;
 
         /// <summary>
@@ -28,45 +29,72 @@ namespace MasterMUD
             }
         }
 
+        /// <summary>
+        ///     Entry-point for the application is invoked prior to the static constructor.
+        /// </summary>
         private static void Main()
         {
             using (App.Current.Mutex)
             using (App.Current.EventWaitHandle)
-                if (App.Current.Features.Count > 0)
+            {
+                foreach (var feature in App.Current.Features)
                     try
                     {
-                        foreach (var feature in App.Current.Features.Values)
-                            feature.Start();
-
-                        System.Console.CancelKeyPress += Console_CancelKeyPress;
-
-                        App.Log(Properties.Resources.Ready);
-
-                        try
-                        {
-                            
-                                App.Current.EventWaitHandle.WaitOne();
-                        }
-                        catch (System.Exception ex)
-                        {
-                            App.Log(ex);
-                        }
-
-                        System.Console.CancelKeyPress -= Console_CancelKeyPress;
-
-                        foreach (var feature in App.Current.Features.Values)
-                            feature.Stop();
+                        feature.Value.Start();
                     }
-                    catch (System.Exception ex)
+                    catch (Exception ex)
                     {
                         App.Log(ex);
                     }
+
+                App.Log(Properties.Resources.Ready);
+
+                System.Console.CancelKeyPress += Console_CancelKeyPress;
+
+                // TODO: Allow for different modes of execution where the application isn't simply waiting for user-input CTRL+C to terminate.
+
+                try
+                {                    
+                    App.Current.EventWaitHandle.WaitOne();
+                }
+                catch (System.Exception ex)
+                {
+                    App.Log(ex);
+                }
+                finally
+                {
+                    System.Console.CancelKeyPress -= Console_CancelKeyPress;
+
+                    App.Current.Terminate();
+                }
+            }
         }
 
         private static void Console_CancelKeyPress(object sender, System.ConsoleCancelEventArgs e)
         {
-            e.Cancel = true;
-            App.Current.Terminate();
+            try
+            {
+                App.Current.EventWaitHandle.Set();
+            }
+            catch (System.Exception ex)
+            {
+                App.Log(ex);
+            }
+            finally
+            {
+                try
+                {
+                    App.Current.EventWaitHandle.Reset();
+                }
+                catch (System.Exception ex2)
+                {
+                    App.Log(ex2);
+                }
+                finally
+                {
+                    e.Cancel = true;
+                }
+            }
         }
     }
 }

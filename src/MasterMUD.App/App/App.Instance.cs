@@ -22,6 +22,10 @@ namespace MasterMUD
 
         internal System.Collections.Concurrent.ConcurrentDictionary<string, MasterMUD.Interfaces.IFeature> Features { get; }
 
+        /// <summary>
+        ///     Loads plugins and initializes the runtime.
+        /// </summary>
+        /// <exception cref="System.InvalidProgramException">Only one running instance is allowed.</exception>
         private App()
         {
             this.EventWaitHandle = new System.Threading.EventWaitHandle(initialState: false, mode: System.Threading.EventResetMode.ManualReset);
@@ -35,14 +39,10 @@ namespace MasterMUD
             var fi = new System.IO.FileInfo(args[0]);
             var dir = new System.IO.DirectoryInfo(fi.DirectoryName);
             var pluginsPath = System.IO.Path.Combine(dir.FullName, "Plugins");
-            var pluginsDir = System.IO.Directory.Exists(pluginsPath) ? new System.IO.DirectoryInfo(pluginsPath) : System.IO.Directory.CreateDirectory(pluginsPath);
-            var dlls = pluginsDir.GetFiles("*.dll", System.IO.SearchOption.AllDirectories);
-
-            foreach (var dll in dlls)
+            
+            foreach (var dll in (System.IO.Directory.Exists(pluginsPath) ? new System.IO.DirectoryInfo(pluginsPath) : System.IO.Directory.CreateDirectory(pluginsPath)).GetFiles("*.dll", System.IO.SearchOption.AllDirectories))
                 foreach (var feature in System.Reflection.Assembly.LoadFrom(dll.FullName).GetTypes().Where(type => false == type.IsInterface && type.GetInterface(nameof(IFeature)) != null).Select(type => (IFeature)System.Activator.CreateInstance(type)).Where(feature => true == this.Features.TryAdd(feature.Name, feature)))
                     App.Log($"Feature '{feature.Name}' added.");
-
-            this.ActivationSubscription = System.Reactive.Linq.Observable.Interval(System.TimeSpan.FromSeconds(6)).Subscribe(t => App.Log($"Tick-{t + 1}"));
 
             if (System.Environment.UserInteractive)
             {
@@ -52,25 +52,33 @@ namespace MasterMUD
                 System.Console.CursorVisible = false;
                 System.Console.TreatControlCAsInput = false;
             }
+
+            this.ActivationSubscription = System.Reactive.Linq.Observable.Interval(System.TimeSpan.FromSeconds(1)).Subscribe(this.Tick);
         }
 
-        private void Terminate()
+        /// <summary>
+        ///     Signals the <see cref="App.EventWaitHandle"/> to set and reset.
+        /// </summary>
+        protected internal void Terminate()
         {
-            try
-            {
-                this.EventWaitHandle.Set();
-            }
-            finally
-            {
+            App.Current.ActivationSubscription.Dispose();
+
+            foreach (var feature in App.Current.Features)
                 try
                 {
-                    this.EventWaitHandle.Reset();
+                    feature.Value.Stop();
                 }
-                finally
+                catch (Exception ex)
                 {
-                    this.ActivationSubscription.Dispose();
+                    App.Log(ex);
                 }
-            }
+        }
+
+        private async void Tick(long tick)
+        {
+            await System.Threading.Tasks.Task.Yield();
+
+            App.Log($"Tick {tick}", foregroundColor: ConsoleColor.DarkYellow);            
         }
     }
 }
