@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
-using MasterMUD.Interfaces;
 
 namespace MasterMUD
 {
@@ -11,7 +10,7 @@ namespace MasterMUD
         /// <summary>
         ///     Singleton instance of the application at runtime.
         /// </summary>
-        public static readonly App Current;
+        public static App Current { get; }
 
         /// <summary>
         ///     Initializes the environment and performs all required work before Main is allowed to run.
@@ -21,11 +20,11 @@ namespace MasterMUD
         {
             try
             {
-                App.Current = new App();
+                App.Current = new App(pluginsPath: null);
             }
             catch (System.Exception ex)
             {
-                App.Log(ex);
+                System.Environment.Exit(ex.HResult);
             }
         }
 
@@ -37,7 +36,7 @@ namespace MasterMUD
             using (App.Current.Mutex)
             using (App.Current.EventWaitHandle)
             {
-                foreach (var feature in App.Current.Features)
+                foreach (var feature in App.Current.Plugins)
                     try
                     {
                         feature.Value.Start();
@@ -65,11 +64,11 @@ namespace MasterMUD
                 {
                     System.Console.CancelKeyPress -= Console_CancelKeyPress;
 
-                    App.Current.Terminate();
+                    App.Current.Shutdown();
                 }
             }
         }
-
+        
         private static void Console_CancelKeyPress(object sender, System.ConsoleCancelEventArgs e)
         {
             try

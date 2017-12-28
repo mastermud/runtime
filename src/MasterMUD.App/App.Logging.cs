@@ -1,5 +1,4 @@
 ﻿using System.Linq;
-using MasterMUD.Interfaces;
 
 namespace MasterMUD
 {
@@ -13,7 +12,6 @@ namespace MasterMUD
 
         private static void Log(object data, System.ConsoleColor foregroundColor)
         {
-            // TODO: Log somewhere else
             if (System.Environment.UserInteractive)
                 lock (App.Lock)
                     try
