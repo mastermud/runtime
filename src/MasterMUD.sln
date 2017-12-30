@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27205.2004
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MasterMUD.App", "MasterMUD.App.csproj", "{D1AE3E0D-8AA9-4AFC-B8EA-E01ED9977C02}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MasterMUD", "MasterMUD.App/MasterMUD.App.csproj", "{D1AE3E0D-8AA9-4AFC-B8EA-E01ED9977C02}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
