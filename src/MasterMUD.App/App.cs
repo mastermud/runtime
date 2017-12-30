@@ -23,14 +23,14 @@ namespace MasterMUD
         private static readonly System.Threading.EventWaitHandle EventWaitHandle;
 
         /// <summary>
-        ///     The actual object instance referenced by <see cref="App.Current"/>.
+        ///     Used to hide the implementation details of <see cref="App.Current"/> and to prevent multiple calls to <see cref="App.Main"/>.
         /// </summary>
-        private static readonly Lazy<App> Instance;
+        private static readonly Lazy<App> Context;
 
         /// <summary>
         ///     Singleton instance of the application at runtime.
         /// </summary>
-        public static App.IApp Current => App.Instance.Value;
+        public static App.IApp Current => App.Context.Value;
 
         /// <summary>
         ///     Initializes the environment and performs all required work before Main is allowed to run.
@@ -40,12 +40,8 @@ namespace MasterMUD
         {
             try
             {
-                System.Console.Title = Properties.Resources.Title;
-                System.Console.Clear();
-                System.Console.CursorVisible = false;
-                System.Console.TreatControlCAsInput = false;
                 App.EventWaitHandle = new System.Threading.EventWaitHandle(initialState: false, mode: System.Threading.EventResetMode.ManualReset);
-                App.Instance = new Lazy<App>(() => new App());
+                App.Context = new Lazy<App>(() => new App());
                 App.Mutex = new System.Threading.Mutex(initiallyOwned: true, name: nameof(MasterMUD), createdNew: out var createdNew);
 
                 if (!createdNew)
@@ -63,13 +59,13 @@ namespace MasterMUD
         /// </summary>
         private static void Main()
         {
-            // Prevent multiple calls to Main
-            if (false == App.Instance.IsValueCreated)
+            // Disallow multiple calls into the main thread.
+            if (false == App.Context.IsValueCreated)
                 using (App.Mutex)
                 using (App.EventWaitHandle)
                     try
                     {
-                        App.Instance.Value.Start();
+                        App.Context.Value.Start();
                     }
                     catch (Exception ex)
                     {
@@ -87,7 +83,7 @@ namespace MasterMUD
                         }
                         finally
                         {
-                            App.Instance.Value.Stop();
+                            App.Context.Value.Stop();
                         }
                     }
         }

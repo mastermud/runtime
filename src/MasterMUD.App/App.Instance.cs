@@ -24,7 +24,7 @@ namespace MasterMUD
         ///     The plugins identified during initialization.
         /// </summary>
         private System.Collections.Concurrent.ConcurrentDictionary<string, App.IPlugin> Plugins { get; }
-
+        
         /// <summary>
         ///     Loads plugins and initializes the runtime.
         /// </summary>
@@ -55,6 +55,10 @@ namespace MasterMUD
                 }
 
             System.Console.CancelKeyPress += App.Console_CancelKeyPress;
+            System.Console.Title = Properties.Resources.Title;
+            System.Console.Clear();
+            System.Console.CursorVisible = false;
+            System.Console.TreatControlCAsInput = false;           
 
             App.Log(Properties.Resources.Ready);
         }
@@ -62,7 +66,7 @@ namespace MasterMUD
         private void Stop()
         {
             System.Console.CancelKeyPress -= App.Console_CancelKeyPress;
-
+            
             this.ActivationSubscription.Dispose();
 
             foreach (var feature in this.Plugins)
