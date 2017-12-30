@@ -13,7 +13,12 @@ namespace MasterMUD
         /// <summary>
         ///     Retains a reactive timer for the lifetime of the application.
         /// </summary>
-        private readonly System.IDisposable ActivationSubscription;
+        private volatile System.IDisposable ActivationSubscription;
+
+        /// <summary>
+        ///     Listens for incoming connections.
+        /// </summary>
+        private readonly App.TcpListener Listener;
 
         /// <summary>
         ///     The full file system path to the directory containing implementations of <see cref="MasterMUD.App.IPlugin"/>.
@@ -24,13 +29,20 @@ namespace MasterMUD
         ///     The plugins identified during initialization.
         /// </summary>
         private System.Collections.Concurrent.ConcurrentDictionary<string, App.IPlugin> Plugins { get; }
-        
+
         /// <summary>
         ///     Loads plugins and initializes the runtime.
         /// </summary>
         /// <exception cref="System.InvalidProgramException">Only one running instance is allowed.</exception>
         private App()
         {
+            System.Console.CancelKeyPress += App.Console_CancelKeyPress;
+            System.Console.Title = Properties.Resources.Title;
+            System.Console.Clear();
+            System.Console.CursorVisible = false;
+            System.Console.TreatControlCAsInput = false;
+
+            this.Listener = new TcpListener(localaddr: System.Net.IPAddress.Loopback, port: 23);
             this.Plugins = new System.Collections.Concurrent.ConcurrentDictionary<string, App.IPlugin>(System.StringComparer.OrdinalIgnoreCase);
             this.PluginsPath = System.IO.Path.Combine(new System.IO.DirectoryInfo(new System.IO.FileInfo(System.Environment.GetCommandLineArgs()[0]).DirectoryName).FullName, nameof(App.Plugins));
 
@@ -38,16 +50,18 @@ namespace MasterMUD
                 foreach (var feature in System.Reflection.Assembly.LoadFrom(dll.FullName).GetTypes().Where(type => false == type.IsInterface && type.GetInterface(nameof(App.IPlugin)) != null).Select(type => (App.IPlugin)System.Activator.CreateInstance(type)).Where(feature => true == this.Plugins.TryAdd(feature.Name, feature)))
                     continue;
 
-            this.Activated = System.DateTime.Now;
             this.ActivationSubscription = System.Reactive.Linq.Observable.Interval(System.TimeSpan.FromMilliseconds(App.ApplicationTickRateMilliseconds)).Subscribe(this.Tick);
+            this.Activated = System.DateTime.Now;
         }
 
         private void Start()
         {
-            foreach (var feature in this.Plugins)
+            this.Listener.Start();
+
+            foreach (var plugin in this.Plugins.Values.Where(plugin => false == plugin.Active).Select(plugin => plugin.Name).ToArray())
                 try
                 {
-                    feature.Value.Start();
+                    this.Plugins[plugin].Start();
                 }
                 catch (Exception ex)
                 {
@@ -55,24 +69,18 @@ namespace MasterMUD
                 }
 
             System.Console.CancelKeyPress += App.Console_CancelKeyPress;
-            System.Console.Title = Properties.Resources.Title;
-            System.Console.Clear();
-            System.Console.CursorVisible = false;
-            System.Console.TreatControlCAsInput = false;           
-
-            App.Log(Properties.Resources.Ready);
         }
 
         private void Stop()
         {
             System.Console.CancelKeyPress -= App.Console_CancelKeyPress;
-            
-            this.ActivationSubscription.Dispose();
 
-            foreach (var feature in this.Plugins)
+            this.Listener.Stop();
+
+            foreach (var feature in this.Plugins.Values.Where(plugin => plugin.Active).Select(plugin => plugin.Name).ToArray())
                 try
                 {
-                    feature.Value.Stop();
+                    this.Plugins[feature].Stop();
                 }
                 catch (Exception ex)
                 {

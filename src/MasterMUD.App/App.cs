@@ -27,6 +27,8 @@ namespace MasterMUD
         /// </summary>
         private static readonly Lazy<App> Context;
 
+
+
         /// <summary>
         ///     Singleton instance of the application at runtime.
         /// </summary>
@@ -73,6 +75,8 @@ namespace MasterMUD
                     }
                     finally
                     {
+                        App.Log(Properties.Resources.Ready);
+
                         try
                         {
                             App.EventWaitHandle.WaitOne();
