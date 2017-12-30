@@ -13,9 +13,9 @@
     <Authors>Seth Rudesill</Authors>
     <Copyright>Copyright © Seth Rudesill 2017</Copyright>
     <NeutralLanguage>en</NeutralLanguage>
-    <Version>1.0.1</Version>
-    <AssemblyVersion>1.0.1.2</AssemblyVersion>
-    <FileVersion>1.0.1.2</FileVersion>
+    <Version>1.0.2</Version>
+    <AssemblyVersion>1.0.2.0</AssemblyVersion>
+    <FileVersion>1.0.2.0</FileVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
