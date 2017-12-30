@@ -4,33 +4,35 @@ using System.Text;
 
 namespace MasterMUD.Network
 {
-    public sealed class TcpListener : MasterMUD.Interfaces.IFeature
+    public sealed class TcpListener : MasterMUD.App.Plugin
     {
-        public bool Active { get; private set; }
-
-        public string Name { get; } = "MasterMUD Listener";
+        public override string Name { get; } = nameof(TcpListener);
 
         public TcpListener()
         {
 
         }
 
-        public void Start()
+        public override void Start()
         {
-            if (true == this.Active)
-                return;
+            if (false == base.Active)
+            {
+                base.Start();
 
-            this.Active = true;
-            App.Log($"{Name} activated.");
+                if (true == base.Active)
+                    App.Log($"{this.Name} activated.");
+            }
         }
 
-        public void Stop()
+        public override void Stop()
         {
-            if (false == this.Active)
-                return;
+            if (true == base.Active)
+            {
+                base.Stop();
 
-            this.Active = false;
-            App.Log($"{Name} de-activated.");
+                if (false == base.Active)
+                    App.Log($"{this.Name} de-activated.");
+            }
         }
     }
 }

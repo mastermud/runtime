@@ -18,7 +18,7 @@ namespace MasterMUD
                     {
                         var oldFgColor = System.Console.ForegroundColor;
                         System.Console.ForegroundColor = System.ConsoleColor.Cyan;
-                        System.Console.Write("{0} ", (System.DateTime.Now - App.Current.Activated));
+                        System.Console.Write("{0:HH:hh:ss} ", System.DateTime.Now);
                         System.Console.ForegroundColor = foregroundColor;
                         System.Console.WriteLine(data);
                         System.Console.ForegroundColor = oldFgColor;
@@ -30,7 +30,6 @@ namespace MasterMUD
         }
 
         public static void Log(System.Exception exception) => App.Log(data: exception, foregroundColor: System.ConsoleColor.Red);
-        public static void Log(string message) => App.Log(data: message, foregroundColor: System.ConsoleColor.White);
-        public static void Log(string message, System.ConsoleColor foregroundColor) => App.Log(data: message, foregroundColor: foregroundColor);
+        public static void Log(string message) => App.Log(data: message, foregroundColor: System.ConsoleColor.White);        
     }
 }

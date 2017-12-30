@@ -6,7 +6,6 @@ namespace MasterMUD
 {
     public sealed partial class App
     {
-
         public interface IPlugin
         {
             bool Active { get; }

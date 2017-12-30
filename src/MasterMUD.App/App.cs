@@ -8,9 +8,29 @@ namespace MasterMUD
     public sealed partial class App
     {
         /// <summary>
+        ///     The tickrate for the application.
+        /// </summary>
+        private const int ApplicationTickRateMilliseconds = 1000 * 6;
+
+        /// <summary>
+        ///     Ensures only one running instance is allowed.
+        /// </summary>
+        private static readonly System.Threading.Mutex Mutex;
+
+        /// <summary>
+        ///     Keeps the application alive forever.
+        /// </summary>
+        private static readonly System.Threading.EventWaitHandle EventWaitHandle;
+
+        /// <summary>
+        ///     The actual object instance referenced by <see cref="App.Current"/>.
+        /// </summary>
+        private static readonly Lazy<App> Instance;
+
+        /// <summary>
         ///     Singleton instance of the application at runtime.
         /// </summary>
-        public static App Current { get; }
+        public static App.IApp Current => App.Instance.Value;
 
         /// <summary>
         ///     Initializes the environment and performs all required work before Main is allowed to run.
@@ -20,10 +40,20 @@ namespace MasterMUD
         {
             try
             {
-                App.Current = new App(pluginsPath: null);
+                System.Console.Title = Properties.Resources.Title;
+                System.Console.Clear();
+                System.Console.CursorVisible = false;
+                System.Console.TreatControlCAsInput = false;
+                App.EventWaitHandle = new System.Threading.EventWaitHandle(initialState: false, mode: System.Threading.EventResetMode.ManualReset);
+                App.Instance = new Lazy<App>(() => new App());
+                App.Mutex = new System.Threading.Mutex(initiallyOwned: true, name: nameof(MasterMUD), createdNew: out var createdNew);
+
+                if (!createdNew)
+                    throw new System.InvalidProgramException(Properties.Resources.StaticConstructorDuplicated);
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
+                System.Console.Error.WriteLine(ex.Message);
                 System.Environment.Exit(ex.HResult);
             }
         }
@@ -33,47 +63,40 @@ namespace MasterMUD
         /// </summary>
         private static void Main()
         {
-            using (App.Current.Mutex)
-            using (App.Current.EventWaitHandle)
-            {
-                foreach (var feature in App.Current.Plugins)
+            // Prevent multiple calls to Main
+            if (false == App.Instance.IsValueCreated)
+                using (App.Mutex)
+                using (App.EventWaitHandle)
                     try
                     {
-                        feature.Value.Start();
+                        App.Instance.Value.Start();
                     }
                     catch (Exception ex)
                     {
                         App.Log(ex);
                     }
-
-                App.Log(Properties.Resources.Ready);
-
-                System.Console.CancelKeyPress += Console_CancelKeyPress;
-
-                // TODO: Allow for different modes of execution where the application isn't simply waiting for user-input CTRL+C to terminate.
-
-                try
-                {                    
-                    App.Current.EventWaitHandle.WaitOne();
-                }
-                catch (System.Exception ex)
-                {
-                    App.Log(ex);
-                }
-                finally
-                {
-                    System.Console.CancelKeyPress -= Console_CancelKeyPress;
-
-                    App.Current.Shutdown();
-                }
-            }
+                    finally
+                    {
+                        try
+                        {
+                            App.EventWaitHandle.WaitOne();
+                        }
+                        catch (Exception ex)
+                        {
+                            App.Log(ex);
+                        }
+                        finally
+                        {
+                            App.Instance.Value.Stop();
+                        }
+                    }
         }
-        
+
         private static void Console_CancelKeyPress(object sender, System.ConsoleCancelEventArgs e)
         {
             try
             {
-                App.Current.EventWaitHandle.Set();
+                App.EventWaitHandle.Set();
             }
             catch (System.Exception ex)
             {
@@ -83,7 +106,7 @@ namespace MasterMUD
             {
                 try
                 {
-                    App.Current.EventWaitHandle.Reset();
+                    App.EventWaitHandle.Reset();
                 }
                 catch (System.Exception ex2)
                 {

@@ -3,65 +3,69 @@ using System.Linq;
 
 namespace MasterMUD
 {
-    public sealed partial class App
+    public sealed partial class App : App.IApp
     {
-        public System.DateTime Activated { get; } = System.DateTime.Now;
+        /// <summary>
+        ///     The <see cref="System.DateTime"/> this object instance was initialized via its private constructor.
+        /// </summary>
+        public System.DateTime Activated { get; }
 
+        /// <summary>
+        ///     Retains a reactive timer for the lifetime of the application.
+        /// </summary>
         private readonly System.IDisposable ActivationSubscription;
 
         /// <summary>
-        ///     Ensures only one running instance is allowed.
+        ///     The full file system path to the directory containing implementations of <see cref="MasterMUD.App.IPlugin"/>.
         /// </summary>
-        private readonly System.Threading.Mutex Mutex;
+        private readonly string PluginsPath;
 
         /// <summary>
-        ///     Keeps the application alive forever.
+        ///     The plugins identified during initialization.
         /// </summary>
-        private readonly System.Threading.EventWaitHandle EventWaitHandle;
-
-        private readonly TcpListener Listener;
-
-        internal System.Collections.Concurrent.ConcurrentDictionary<string, App.IPlugin> Plugins { get; }
+        private System.Collections.Concurrent.ConcurrentDictionary<string, App.IPlugin> Plugins { get; }
 
         /// <summary>
         ///     Loads plugins and initializes the runtime.
         /// </summary>
         /// <exception cref="System.InvalidProgramException">Only one running instance is allowed.</exception>
-        private App(string pluginsPath = null)
+        private App()
         {
-            if (true == string.IsNullOrEmpty(pluginsPath))
-                pluginsPath = System.IO.Path.Combine(new System.IO.DirectoryInfo(new System.IO.FileInfo(System.Environment.GetCommandLineArgs()[0]).DirectoryName).FullName, nameof(App.Plugins));
-
-            System.Console.Title = Properties.Resources.Title;
-            System.Console.Clear();
-            System.Console.CursorVisible = false;
-            System.Console.TreatControlCAsInput = false;
-
-            this.EventWaitHandle = new System.Threading.EventWaitHandle(initialState: false, mode: System.Threading.EventResetMode.ManualReset);
             this.Plugins = new System.Collections.Concurrent.ConcurrentDictionary<string, App.IPlugin>(System.StringComparer.OrdinalIgnoreCase);
-            this.Mutex = new System.Threading.Mutex(initiallyOwned: true, name: nameof(MasterMUD), createdNew: out var createdNew);
+            this.PluginsPath = System.IO.Path.Combine(new System.IO.DirectoryInfo(new System.IO.FileInfo(System.Environment.GetCommandLineArgs()[0]).DirectoryName).FullName, nameof(App.Plugins));
 
-            if (!createdNew)
-                throw new System.InvalidProgramException(Properties.Resources.StaticConstructorDuplicated);
-
-            foreach (var dll in (System.IO.Directory.Exists(pluginsPath) ? new System.IO.DirectoryInfo(pluginsPath) : System.IO.Directory.CreateDirectory(pluginsPath)).GetFiles("*.dll", System.IO.SearchOption.AllDirectories))
+            foreach (var dll in (System.IO.Directory.Exists(this.PluginsPath) ? new System.IO.DirectoryInfo(this.PluginsPath) : System.IO.Directory.CreateDirectory(this.PluginsPath)).GetFiles("*.dll", System.IO.SearchOption.AllDirectories))
                 foreach (var feature in System.Reflection.Assembly.LoadFrom(dll.FullName).GetTypes().Where(type => false == type.IsInterface && type.GetInterface(nameof(App.IPlugin)) != null).Select(type => (App.IPlugin)System.Activator.CreateInstance(type)).Where(feature => true == this.Plugins.TryAdd(feature.Name, feature)))
                     continue;
 
-            this.Listener = new TcpListener(localaddr: System.Net.IPAddress.Loopback, port: 23);
-            this.ActivationSubscription = System.Reactive.Linq.Observable.Interval(System.TimeSpan.FromSeconds(6)).Subscribe(this.Tick);
-            this.Listener.Start();
+            this.Activated = System.DateTime.Now;
+            this.ActivationSubscription = System.Reactive.Linq.Observable.Interval(System.TimeSpan.FromMilliseconds(App.ApplicationTickRateMilliseconds)).Subscribe(this.Tick);
         }
 
-        /// <summary>
-        ///     Signals the <see cref="App.EventWaitHandle"/> to set and reset.
-        /// </summary>
-        protected internal void Shutdown()
+        private void Start()
         {
-            App.Current.Listener.Stop();
-            App.Current.ActivationSubscription.Dispose();
+            foreach (var feature in this.Plugins)
+                try
+                {
+                    feature.Value.Start();
+                }
+                catch (Exception ex)
+                {
+                    App.Log(ex);
+                }
 
-            foreach (var feature in App.Current.Plugins)
+            System.Console.CancelKeyPress += App.Console_CancelKeyPress;
+
+            App.Log(Properties.Resources.Ready);
+        }
+
+        private void Stop()
+        {
+            System.Console.CancelKeyPress -= App.Console_CancelKeyPress;
+
+            this.ActivationSubscription.Dispose();
+
+            foreach (var feature in this.Plugins)
                 try
                 {
                     feature.Value.Stop();
@@ -72,11 +76,22 @@ namespace MasterMUD
                 }
         }
 
+        /// <summary>
+        ///     
+        /// </summary>
+        /// <param name="tick"></param>
         private async void Tick(long tick)
         {
+            var msg = $"Tick {tick + 1}";
+
             await System.Threading.Tasks.Task.Yield();
 
-            System.Diagnostics.Debug.WriteLine("Tick {0}", tick + 1);
+            App.Log(msg);
+        }
+
+        public interface IApp
+        {
+            System.DateTime Activated { get; }
         }
     }
 }
