@@ -52,12 +52,20 @@ namespace MasterMUD
 
             this.ActivationSubscription = System.Reactive.Linq.Observable.Interval(System.TimeSpan.FromMilliseconds(App.ApplicationTickRateMilliseconds)).Subscribe(this.Tick);
             this.Activated = System.DateTime.Now;
+            this.Listener.Subscribe(this.Connect);
+        }
+
+        private async void Connect(App.TcpConnection connection)
+        {
+            var session = connection;
+
+            await System.Threading.Tasks.Task.Yield();
+
+            session.Disconnect();
         }
 
         private void Start()
         {
-            this.Listener.Start();
-
             foreach (var plugin in this.Plugins.Values.Where(plugin => false == plugin.Active).Select(plugin => plugin.Name).ToArray())
                 try
                 {
@@ -68,6 +76,8 @@ namespace MasterMUD
                     App.Log(ex);
                 }
 
+            this.Listener.Start();
+
             System.Console.CancelKeyPress += App.Console_CancelKeyPress;
         }
 
@@ -77,7 +87,7 @@ namespace MasterMUD
 
             this.Listener.Stop();
 
-            foreach (var feature in this.Plugins.Values.Where(plugin => plugin.Active).Select(plugin => plugin.Name).ToArray())
+            foreach (var feature in this.Plugins.Values.Where(plugin => true == plugin.Active).Select(plugin => plugin.Name).ToArray())
                 try
                 {
                     this.Plugins[feature].Stop();

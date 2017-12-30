@@ -13,6 +13,11 @@ namespace MasterMUD
         private const int ApplicationTickRateMilliseconds = 1000 * 6;
 
         /// <summary>
+        ///     Used to hide the implementation details of <see cref="App.Current"/> and to prevent multiple calls to <see cref="App.Main"/>.
+        /// </summary>
+        private static readonly Lazy<App> Context;
+
+        /// <summary>
         ///     Ensures only one running instance is allowed.
         /// </summary>
         private static readonly System.Threading.Mutex Mutex;
@@ -23,27 +28,20 @@ namespace MasterMUD
         private static readonly System.Threading.EventWaitHandle EventWaitHandle;
 
         /// <summary>
-        ///     Used to hide the implementation details of <see cref="App.Current"/> and to prevent multiple calls to <see cref="App.Main"/>.
-        /// </summary>
-        private static readonly Lazy<App> Context;
-
-
-
-        /// <summary>
         ///     Singleton instance of the application at runtime.
         /// </summary>
         public static App.IApp Current => App.Context.Value;
 
         /// <summary>
-        ///     Initializes the environment and performs all required work before Main is allowed to run.
+        ///     Ensures only one instance of the application is permitted to run.
         /// </summary>
         /// <remarks>If anything goes wrong in here, we need to do our very best to shutdown the running application.</remarks>
         static App()
         {
             try
             {
-                App.EventWaitHandle = new System.Threading.EventWaitHandle(initialState: false, mode: System.Threading.EventResetMode.ManualReset);
                 App.Context = new Lazy<App>(() => new App());
+                App.EventWaitHandle = new System.Threading.EventWaitHandle(initialState: false, mode: System.Threading.EventResetMode.ManualReset);
                 App.Mutex = new System.Threading.Mutex(initiallyOwned: true, name: nameof(MasterMUD), createdNew: out var createdNew);
 
                 if (!createdNew)
