@@ -91,11 +91,10 @@ namespace MasterMUD
             {
                 var sRemoteEndPoint = oConnection.Client.RemoteEndPoint.ToString();
                 sAddress = sRemoteEndPoint.Substring(0, sRemoteEndPoint.IndexOf(':'));
+                iPort = int.Parse(sRemoteEndPoint.Substring(sAddress.Length + 1));
 
                 if (this.BannedAddresses.Contains(sAddress))
-                    throw new System.Security.SecurityException($"{sAddress} is banned.");
-
-                iPort = int.Parse(sRemoteEndPoint.Substring(sAddress.Length + 1));
+                    throw new System.Security.SecurityException($"{sAddress} ({iPort}) is banned.");
             }
             catch (Exception ex)
             {
@@ -113,15 +112,18 @@ namespace MasterMUD
                 return;
             }
 
-            var session = new App.Session(address: sAddress, port: iPort);
+            var session = App.Session.Connect(address: sAddress, port: iPort, connection: oConnection);
 
-            this.Sessions.Add(session);
+            App.Log($"+++ {session.Address} ({session.Port})");
+
+            await Task.Delay(333, this.CancellationToken);
+
+            App.Log($"--- {session.Address} ({session.Port})");
+
+            session.Disconnect();
         }
 
-        private new void Start()
-        {
-            this.Start(backlog: -1);
-        }
+        private new void Start() => this.Start(backlog: -1);
 
         private new void Start(int backlog)
         {

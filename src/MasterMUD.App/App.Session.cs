@@ -9,14 +9,30 @@ namespace MasterMUD
     {
         public sealed class Session
         {
-            public string Address { get; }
+            internal static Session Connect(string address, int port, System.Net.Sockets.TcpClient connection) => new Session(address, port, connection);
 
-            public int Port { get; }
+            public string Address { get; private set; }
 
-            protected internal Session(string address, int port)
+            public int Port { get; private set; }
+
+            private volatile System.Net.Sockets.TcpClient Connection;
+
+            private Session(string address, int port, System.Net.Sockets.TcpClient connection)
             {
                 this.Address = address;
                 this.Port = port;
+                this.Connection = connection;
+            }
+
+            protected internal void Disconnect()
+            {
+                var conn = this.Connection;
+
+                this.Address = null;
+                this.Port = 0;
+                this.Connection = null;
+
+                conn.Dispose();
             }
         }
     }
