@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Reactive.Linq;
 
 namespace MasterMUD
 {
@@ -15,10 +16,7 @@ namespace MasterMUD
         /// </summary>
         private volatile System.IDisposable ActivationSubscription;
 
-        /// <summary>
-        ///     Listens for incoming connections.
-        /// </summary>
-        private readonly App.TcpListener Listener;
+        private readonly TcpListener Listener;
 
         /// <summary>
         ///     The full file system path to the directory containing implementations of <see cref="MasterMUD.App.IPlugin"/>.
@@ -42,7 +40,7 @@ namespace MasterMUD
             System.Console.CursorVisible = false;
             System.Console.TreatControlCAsInput = false;
 
-            this.Listener = new TcpListener(localaddr: System.Net.IPAddress.Loopback, port: 23);
+            this.Listener = new TcpListener(System.Net.IPAddress.Any, 23);
             this.Plugins = new System.Collections.Concurrent.ConcurrentDictionary<string, App.IPlugin>(System.StringComparer.OrdinalIgnoreCase);
             this.PluginsPath = System.IO.Path.Combine(new System.IO.DirectoryInfo(new System.IO.FileInfo(System.Environment.GetCommandLineArgs()[0]).DirectoryName).FullName, nameof(App.Plugins));
 
@@ -52,16 +50,6 @@ namespace MasterMUD
 
             this.ActivationSubscription = System.Reactive.Linq.Observable.Interval(System.TimeSpan.FromMilliseconds(App.ApplicationTickRateMilliseconds)).Subscribe(this.Tick);
             this.Activated = System.DateTime.Now;
-            this.Listener.Subscribe(this.Connect);
-        }
-
-        private async void Connect(App.TcpConnection connection)
-        {
-            var session = connection;
-
-            await System.Threading.Tasks.Task.Yield();
-
-            session.Disconnect();
         }
 
         private void Start()
@@ -114,6 +102,73 @@ namespace MasterMUD
         public interface IApp
         {
             System.DateTime Activated { get; }
+        }
+
+        private sealed class TcpListener : System.Net.Sockets.TcpListener
+        {
+            public new bool Active => base.Active;
+
+            public System.Net.IPAddress Address { get; }
+
+            public int Port { get; }
+
+            public TcpListener(System.Net.IPAddress localaddr, int port) : base(localaddr, port)
+            {
+                this.Address = localaddr;
+                this.Port = port;
+            }
+
+            private async void Connect(System.Net.Sockets.TcpClient connection)
+            {
+                var conn = connection;
+
+                await System.Threading.Tasks.Task.Yield();
+
+                var ipendpoint = (System.Net.IPEndPoint)conn.Client.RemoteEndPoint;
+
+                App.Log($"+++ {ipendpoint.Address} ({ipendpoint.Port})");
+                
+                conn.Close();
+
+                App.Log($"--- {ipendpoint.Address} ({ipendpoint.Port})");
+            }
+
+            public new void Start()
+            {
+                this.Start(backlog: -1);
+            }
+
+            public new void Start(int backlog)
+            {
+                if (true == this.Active)
+                    return;
+
+                try
+                {
+                    base.Start(backlog: backlog < 1 ? 1 : backlog);
+
+                    Observable.While(() => true == this.Active, Observable.FromAsync(base.AcceptTcpClientAsync)).Subscribe(this.Connect);
+                }
+                catch (System.Exception ex)
+                {
+                    App.Log(ex);
+                }
+            }
+
+            public new void Stop()
+            {
+                if (false == this.Active)
+                    return;
+
+                try
+                {
+                    base.Stop();
+                }
+                catch (System.Exception ex)
+                {
+                    App.Log(ex);
+                }
+            }
         }
     }
 }

@@ -45,10 +45,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="App\App.Command.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="System.Linq.Queryable" Version="4.3.0" />
     <PackageReference Include="System.Reactive" Version="4.0.0-preview00001" />
   </ItemGroup>
