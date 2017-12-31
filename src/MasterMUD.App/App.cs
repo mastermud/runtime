@@ -7,6 +7,17 @@ namespace MasterMUD
 {
     public sealed partial class App
     {
+        public interface IApp
+        {
+            System.DateTime Activated { get; }
+
+            bool Active { get; }
+
+            System.Net.IPAddress Address { get; }
+
+            int Port { get; }
+        }
+
         /// <summary>
         ///     The tickrate for the application.
         /// </summary>
@@ -40,7 +51,7 @@ namespace MasterMUD
         {
             try
             {
-                App.Context = new Lazy<App>(() => new App());
+                App.Context = new Lazy<App>(() => new App(localaddr: System.Net.IPAddress.Any, port: 23));
                 App.EventWaitHandle = new System.Threading.EventWaitHandle(initialState: false, mode: System.Threading.EventResetMode.ManualReset);
                 App.Mutex = new System.Threading.Mutex(initiallyOwned: true, name: nameof(MasterMUD), createdNew: out var createdNew);
 

@@ -29,7 +29,7 @@ namespace MasterMUD
                     }
         }
 
-        public static void Log(System.Exception exception) => App.Log(data: exception, foregroundColor: System.ConsoleColor.Red);
+        public static void Log(System.Exception exception) => App.Log(data: exception.Message, foregroundColor: System.ConsoleColor.Red);
         public static void Log(string message) => App.Log(data: message, foregroundColor: System.ConsoleColor.White);        
     }
 }
