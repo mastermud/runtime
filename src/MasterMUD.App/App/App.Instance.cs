@@ -51,8 +51,6 @@ namespace MasterMUD
         /// </summary>
         private System.Collections.Concurrent.ConcurrentDictionary<string, App.IPlugin> Plugins { get; }
 
-        private readonly System.Collections.Generic.HashSet<App.Session> Sessions;
-
         /// <summary>
         ///     Loads plugins and initializes the runtime.
         /// </summary>
@@ -69,7 +67,6 @@ namespace MasterMUD
             this.CancellationTokenSource = new System.Threading.CancellationTokenSource();
             this.Plugins = new System.Collections.Concurrent.ConcurrentDictionary<string, App.IPlugin>(System.StringComparer.OrdinalIgnoreCase);
             this.PluginsPath = System.IO.Path.Combine(new System.IO.DirectoryInfo(new System.IO.FileInfo(System.Environment.GetCommandLineArgs()[0]).DirectoryName).FullName, nameof(App.Plugins));
-            this.Sessions = new System.Collections.Generic.HashSet<Session>();
 
             foreach (var dll in (System.IO.Directory.Exists(this.PluginsPath) ? new System.IO.DirectoryInfo(this.PluginsPath) : System.IO.Directory.CreateDirectory(this.PluginsPath)).GetFiles("*.dll", System.IO.SearchOption.AllDirectories))
                 foreach (var feature in System.Reflection.Assembly.LoadFrom(dll.FullName).GetTypes().Where(type => false == type.IsInterface && type.GetInterface(nameof(App.IPlugin)) != null).Select(type => (App.IPlugin)System.Activator.CreateInstance(type)).Where(feature => true == this.Plugins.TryAdd(feature.Name, feature)))
@@ -81,46 +78,107 @@ namespace MasterMUD
 
         private async void ConnectAsync(System.Net.Sockets.TcpClient connection)
         {
-            string sAddress;
-            int iPort;
-            var oConnection = connection;
-
-            await Task.Yield();
-
-            try
+            using (var oConnection = connection)
             {
-                var sRemoteEndPoint = oConnection.Client.RemoteEndPoint.ToString();
-                sAddress = sRemoteEndPoint.Substring(0, sRemoteEndPoint.IndexOf(':'));
-                iPort = int.Parse(sRemoteEndPoint.Substring(sAddress.Length + 1));
-
-                if (this.BannedAddresses.Contains(sAddress))
-                    throw new System.Security.SecurityException($"{sAddress} ({iPort}) is banned.");
-            }
-            catch (Exception ex)
-            {
-                App.Log(ex);
+                await Task.Yield();
 
                 try
                 {
-                    oConnection.Dispose();
+                    var sRemoteEndPoint = oConnection.Client.RemoteEndPoint.ToString();
+                    var sAddress = sRemoteEndPoint.Substring(0, sRemoteEndPoint.IndexOf(':'));
+                    var iPort = int.Parse(sRemoteEndPoint.Substring(sAddress.Length + 1));
+
+                    if (this.BannedAddresses.Contains(sAddress))
+                        throw new System.Security.SecurityException($"{sAddress} ({iPort}) is banned.");
+
+                    var r = 0;
+                    var i = 0;
+                    var b = default(byte);
+                    var c = default(char);
+                    var input = new byte[80];
+                    var prompt = (byte)62;
+
+                    App.Log($"+++ {sAddress} ({iPort})");
+
+                    using (var stream = oConnection.GetStream())
+                    {
+                        stream.WriteByte(0xFF);
+                        stream.WriteByte(0xFB);
+                        stream.WriteByte(0x01);
+
+                        await stream.ReadAsync(input, 0, input.Length, this.CancellationToken);                        
+
+                        do
+                        {
+                            stream.WriteByte(prompt);
+
+                            do
+                            {
+                                try
+                                {
+                                    if ((r = stream.ReadByte()) < 1)
+                                        break;
+
+                                    if (r == 13)
+                                    {
+                                        if (i > 0)
+                                        {
+                                            var cmd = System.Text.Encoding.ASCII.GetString(input, 0, i + 1).Trim();
+                                            i = 0;
+
+                                            if (string.IsNullOrEmpty(cmd))
+                                                continue;
+                                            
+                                            stream.WriteByte(10);
+                                            stream.WriteByte(13);
+
+                                            App.Log($"{sAddress} ({iPort})> {cmd}");
+
+                                            await Task.Delay(33, this.CancellationToken);
+                                            break;
+                                        }
+
+                                        continue;
+                                    }
+
+                                    if (r == 08)
+                                    {
+                                        if (input[i] != 0)
+                                        {
+                                            input[i] = 0;
+
+                                            if (i > 0)
+                                            {
+                                                i -= 1;
+                                                stream.WriteByte(08);
+                                            }
+                                        }
+                                        continue;
+                                    }
+
+                                    if (i + 1 < input.Length && false == Char.IsControl(c = (char)(b = (byte)r)))
+                                    {
+                                        stream.WriteByte(input[i] = b);
+                                        i += 1;
+                                        continue;
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    r = -1;
+                                    App.Log(ex);                                    
+                                }
+                            } while (true);
+                        } while (r > 0);
+                    }
+
+                    App.Log($"--- {sAddress} ({iPort})");
                 }
-                catch (Exception ex2)
+                catch (Exception ex)
                 {
-                    App.Log(ex2);
+                    App.Log(ex);
                 }
-
-                return;
             }
-
-            var session = App.Session.Connect(address: sAddress, port: iPort, connection: oConnection);
-
-            App.Log($"+++ {session.Address} ({session.Port})");
-
-            await Task.Delay(333, this.CancellationToken);
-
-            App.Log($"--- {session.Address} ({session.Port})");
-
-            session.Disconnect();
         }
 
         private new void Start() => this.Start(backlog: -1);
@@ -179,6 +237,8 @@ namespace MasterMUD
                     {
                         App.Log(ex);
                     }
+
+                this.CancellationTokenSource.Cancel(throwOnFirstException: true);
             }
         }
 
