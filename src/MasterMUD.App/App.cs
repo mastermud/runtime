@@ -16,6 +16,8 @@ namespace MasterMUD
             System.Net.IPAddress Address { get; }
 
             int Port { get; }
+
+            void Process(App.Session session, string command);
         }
 
         /// <summary>
