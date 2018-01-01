@@ -96,80 +96,79 @@ namespace MasterMUD
                     var b = default(byte);
                     var c = default(char);
                     var input = new byte[80];
-                    var prompt = (byte)62;
+                    var prompt = (byte)'>';
+                    var iwillecho = new byte[3] { 0xFF, 0xFB, 0x01 };
+                    var iwontecho = new byte[3] { 0xFF, 0xFC, 0x01 };
 
                     App.Log($"+++ {sAddress} ({iPort})");
-
+                    
                     using (var stream = oConnection.GetStream())
                     {
-                        stream.WriteByte(0xFF);
-                        stream.WriteByte(0xFB);
-                        stream.WriteByte(0x01);
+                        await stream.WriteAsync(iwillecho, 0, 3, this.CancellationToken);
 
-                        await stream.ReadAsync(input, 0, input.Length, this.CancellationToken);                        
-
-                        do
-                        {
-                            stream.WriteByte(prompt);
-
+                        if ((i = await stream.ReadAsync(input, 0, input.Length, this.CancellationToken)) > 1)
                             do
                             {
-                                try
+                                stream.WriteByte(prompt);
+
+                                do
                                 {
-                                    if ((r = stream.ReadByte()) < 1)
-                                        break;
-
-                                    if (r == 13)
+                                    try
                                     {
-                                        if (i > 0)
-                                        {
-                                            var cmd = System.Text.Encoding.ASCII.GetString(input, 0, i + 1).Trim();
-                                            i = 0;
-
-                                            if (string.IsNullOrEmpty(cmd))
-                                                continue;
-                                            
-                                            stream.WriteByte(10);
-                                            stream.WriteByte(13);
-
-                                            App.Log($"{sAddress} ({iPort})> {cmd}");
-
-                                            await Task.Delay(33, this.CancellationToken);
+                                        if ((r = stream.ReadByte()) < 1)
                                             break;
-                                        }
 
-                                        continue;
-                                    }
-
-                                    if (r == 08)
-                                    {
-                                        if (input[i] != 0)
+                                        if (r == 13)
                                         {
-                                            input[i] = 0;
-
                                             if (i > 0)
                                             {
-                                                i -= 1;
-                                                stream.WriteByte(08);
-                                            }
-                                        }
-                                        continue;
-                                    }
+                                                var cmd = System.Text.Encoding.ASCII.GetString(input, 0, i + 1).Trim();
+                                                i = 0;
 
-                                    if (i + 1 < input.Length && false == Char.IsControl(c = (char)(b = (byte)r)))
-                                    {
-                                        stream.WriteByte(input[i] = b);
-                                        i += 1;
-                                        continue;
+                                                if (string.IsNullOrEmpty(cmd))
+                                                    continue;
+
+                                                stream.WriteByte(10);
+                                                stream.WriteByte(13);
+
+                                                App.Log($"{sAddress} ({iPort})> {cmd}");
+
+                                                await Task.Delay(33, this.CancellationToken);
+                                                break;
+                                            }
+
+                                            continue;
+                                        }
+
+                                        if (r == 08)
+                                        {
+                                            if (input[i] != 0)
+                                            {
+                                                input[i] = 0;
+
+                                                if (i > 0)
+                                                {
+                                                    i -= 1;
+                                                    stream.WriteByte(08);
+                                                }
+                                            }
+                                            continue;
+                                        }
+
+                                        if (i + 1 < input.Length && false == Char.IsControl(c = (char)(b = (byte)r)))
+                                        {
+                                            stream.WriteByte(input[i] = b);
+                                            i += 1;
+                                            continue;
+                                        }
                                     }
-                                }
-                                catch (Exception ex)
-                                {
-                                    r = -1;
-                                    App.Log(ex);                                    
-                                }
-                            } while (true);
-                        } while (r > 0);
+                                    catch (Exception ex)
+                                    {
+                                        r = -1;
+                                        App.Log(ex);
+                                    }
+                                } while (true);
+                            } while (r > 0);
                     }
 
                     App.Log($"--- {sAddress} ({iPort})");
